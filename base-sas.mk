@@ -9,5 +9,4 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_COPY_FILES += \
 	frameworks/av/apex/mediaswcodec.rc:system/etc/init/mediaswcodec-treble.rc \
-	device/phh/treble/environ/init.treble-environ.rc:system/etc/init/init.treble-environ.rc \
 

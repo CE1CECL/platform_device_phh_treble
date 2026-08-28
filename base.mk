@@ -266,4 +266,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     androidx.window.extensions
 
-PRODUCT_EXTRA_VNDK_VERSIONS += 28
+PRODUCT_EXTRA_VNDK_VERSIONS += 26 27 28
+
+PRODUCT_COPY_FILES += \
+	frameworks/native/data/etc/android.software.app_widgets.xml:system/etc/permissions/android.software.app_widgets.xml \
+
+PRODUCT_PACKAGES += \
+	ImsMediaService \
+	ImsStack \
