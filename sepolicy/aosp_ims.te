@@ -1,0 +1,5 @@
+
+
+#============= radio ==============
+allow radio hal_radio_service:service_manager add;
+allow radio platform_app:udp_socket { getattr read setopt shutdown write };
