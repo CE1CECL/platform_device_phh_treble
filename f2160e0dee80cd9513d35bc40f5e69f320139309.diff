@@ -1,0 +1,52 @@
+diff --git a/bluetooth/audio/hal/Android.bp b/bluetooth/audio/hal/Android.bp
+index 5bc57ed..08e526a 100644
+--- a/bluetooth/audio/hal/Android.bp
++++ b/bluetooth/audio/hal/Android.bp
+@@ -25,7 +25,7 @@ cc_binary {
+         "libhidlbase",
+         "liblog",
+         "libutils",
+-        "android.hardware.bluetooth.audio-V2-ndk",
++        "android.hardware.bluetooth.audio-V3-ndk",
+         "libbluetooth_audio_session_aidl_system",
+     ],
+     required: [
+diff --git a/bluetooth/audio/hal/bluetooth_audio_system.xml b/bluetooth/audio/hal/bluetooth_audio_system.xml
+index 77ab1dc..8c0e722 100644
+--- a/bluetooth/audio/hal/bluetooth_audio_system.xml
++++ b/bluetooth/audio/hal/bluetooth_audio_system.xml
+@@ -1,7 +1,7 @@
+ <manifest version="1.0" type="framework">
+     <hal format="aidl">
+         <name>android.hardware.bluetooth.audio</name>
+-        <version>2</version>
++        <version>3</version>
+         <fqname>IBluetoothAudioProviderFactory/sysbta</fqname>
+     </hal>
+     <hal>
+diff --git a/bluetooth/audio/hw/Android.bp b/bluetooth/audio/hw/Android.bp
+index b7f016d..e57aad6 100644
+--- a/bluetooth/audio/hw/Android.bp
++++ b/bluetooth/audio/hw/Android.bp
+@@ -10,7 +10,7 @@ cc_library_shared {
+     ],
+     header_libs: ["libhardware_headers"],
+     shared_libs: [
+-        "android.hardware.bluetooth.audio-V2-ndk",
++        "android.hardware.bluetooth.audio-V3-ndk",
+         "libbluetooth_audio_session_aidl_system",
+         "libaudioutils",
+         "libbase",
+diff --git a/bluetooth/audio/utils/Android.bp b/bluetooth/audio/utils/Android.bp
+index 7b054e5..c2269f5 100644
+--- a/bluetooth/audio/utils/Android.bp
++++ b/bluetooth/audio/utils/Android.bp
+@@ -40,7 +40,7 @@ cc_library_shared {
+         "libbinder_ndk",
+         "libfmq",
+         "liblog",
+-        "android.hardware.bluetooth.audio-V2-ndk",
++        "android.hardware.bluetooth.audio-V3-ndk",
+         "libhidlbase",
+     ],
+ }
