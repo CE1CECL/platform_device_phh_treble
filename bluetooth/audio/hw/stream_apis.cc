@@ -20,6 +20,7 @@
 #include <android-base/logging.h>
 #include <android-base/stringprintf.h>
 #include <cutils/properties.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <log/log.h>
 #include <string.h>
@@ -33,7 +34,6 @@
 #include "utils.h"
 
 using ::android::base::StringPrintf;
-using ::android::bluetooth::audio::utils::FrameCount;
 using ::android::bluetooth::audio::utils::GetAudioParamString;
 using ::android::bluetooth::audio::utils::ParseAudioParams;
 
@@ -335,7 +335,7 @@ static int out_set_parameters(struct audio_stream* stream,
     }
   }
 
-  if (params.find(AUDIO_PARAMETER_STREAM_ROUTING) != params.end()) {
+  if (params.find("routing") != params.end()) {
     auto routing_param = params.find("routing");
     LOG(INFO) << __func__ << ": state=" << out->bluetooth_output_->GetState()
               << ", stream param '" << routing_param->first.c_str() << "="
@@ -365,33 +365,8 @@ static int out_set_parameters(struct audio_stream* stream,
     }
   }
 
-  if (params.find("LeAudioSuspended") != params.end() &&
-      out->bluetooth_output_->IsLeAudio()) {
-    LOG(INFO) << __func__ << ": LeAudioSuspended found LEAudio="
-              << out->bluetooth_output_->IsLeAudio();
-    if (params["LeAudioSuspended"] == "true") {
-      LOG(INFO) << __func__ << ": LeAudioSuspended true, state="
-                << out->bluetooth_output_->GetState()
-                << " stream param standby";
-      if (out->bluetooth_output_->GetState() == BluetoothStreamState::STARTED) {
-        LOG(INFO) << __func__ << ": Stream is started, suspending LE Audio";
-      } else if (out->bluetooth_output_->GetState() !=
-                 BluetoothStreamState::DISABLED) {
-        LOG(INFO) << __func__ << ": Stream is disabled, suspending LE Audio";
-      }
-    } else {
-      LOG(INFO) << __func__ << ": LeAudioSuspended false, state="
-                << out->bluetooth_output_->GetState()
-                << " stream param standby";
-      if (out->bluetooth_output_->GetState() ==
-          BluetoothStreamState::DISABLED) {
-        LOG(INFO) << __func__ << ": Stream is disabled, unsuspending LE Audio";
-      }
-    }
-  }
-
-  if (params.find(AUDIO_PARAMETER_KEY_CLOSING) != params.end()) {
-    if (params[AUDIO_PARAMETER_KEY_CLOSING] == "true") {
+  if (params.find("closing") != params.end()) {
+    if (params["closing"] == "true") {
       LOG(INFO) << __func__ << ": state=" << out->bluetooth_output_->GetState()
                 << " stream param closing, disallow any writes?";
       if (out->bluetooth_output_->GetState() !=
@@ -403,8 +378,8 @@ static int out_set_parameters(struct audio_stream* stream,
     }
   }
 
-  if (params.find(AUDIO_PARAMETER_KEY_EXITING) != params.end()) {
-    if (params[AUDIO_PARAMETER_KEY_EXITING] == "1") {
+  if (params.find("exiting") != params.end()) {
+    if (params["exiting"] == "1") {
       LOG(INFO) << __func__ << ": state=" << out->bluetooth_output_->GetState()
                 << " stream param exiting";
       if (out->bluetooth_output_->GetState() !=
@@ -703,32 +678,21 @@ static int out_get_presentation_position(const struct audio_stream_out* stream,
   return 0;
 }
 
-static void out_update_source_metadata_v7(
+static void out_update_source_metadata(
     struct audio_stream_out* stream,
-    const struct source_metadata_v7* source_metadata_v7) {
+    const struct source_metadata* source_metadata) {
   auto* out = reinterpret_cast<BluetoothStreamOut*>(stream);
   std::unique_lock<std::mutex> lock(out->mutex_);
-  if (source_metadata_v7 == nullptr || source_metadata_v7->track_count == 0) {
+  if (source_metadata == nullptr || source_metadata->track_count == 0) {
     return;
   }
   LOG(VERBOSE) << __func__ << ": state=" << out->bluetooth_output_->GetState()
-               << ", " << source_metadata_v7->track_count << " track(s)";
-  if (!out->is_aidl) {
-    struct source_metadata source_metadata;
-    source_metadata.track_count = source_metadata_v7->track_count;
-    struct playback_track_metadata playback_track;
-    playback_track_metadata_from_v7(&playback_track,
-                                    source_metadata_v7->tracks);
-    source_metadata.tracks = &playback_track;
+               << ", " << source_metadata->track_count << " track(s)";
+  out->bluetooth_output_->UpdateSourceMetadata(source_metadata);
+}
 
-    static_cast<::android::bluetooth::audio::hidl::BluetoothAudioPortHidl*>(
-        out->bluetooth_output_.get())
-        ->UpdateTracksMetadata(&source_metadata);
-  } else {
-    static_cast<::android::bluetooth::audio::aidl::BluetoothAudioPortAidl*>(
-        out->bluetooth_output_.get())
-        ->UpdateSourceMetadata(source_metadata_v7);
-  }
+static size_t frame_count(size_t microseconds, uint32_t sample_rate) {
+  return (microseconds * sample_rate) / 1000000;
 }
 
 int adev_open_output_stream(struct audio_hw_device* dev,
@@ -776,10 +740,7 @@ int adev_open_output_stream(struct audio_hw_device* dev,
   out->stream_out_.pause = out_pause;
   out->stream_out_.resume = out_resume;
   out->stream_out_.get_presentation_position = out_get_presentation_position;
-  out->stream_out_.update_source_metadata_v7 = out_update_source_metadata_v7;
-  /** Fix Coverity Scan Issue @{ */
-  out->channel_mask_ = AUDIO_CHANNEL_NONE;
-  /** @} */
+  out->stream_out_.update_source_metadata = out_update_source_metadata;
 
   if (!out->bluetooth_output_->LoadAudioConfig(config)) {
     LOG(ERROR) << __func__ << ": state=" << out->bluetooth_output_->GetState()
@@ -821,7 +782,7 @@ int adev_open_output_stream(struct audio_hw_device* dev,
   }
 
   out->frames_count_ =
-      FrameCount(out->preferred_data_interval_us, out->sample_rate_);
+      frame_count(out->preferred_data_interval_us, out->sample_rate_);
 
   out->frames_rendered_ = 0;
   out->frames_presented_ = 0;
@@ -1221,9 +1182,8 @@ static int in_set_microphone_field_dimension(
   return -ENOSYS;
 }
 
-static void in_update_sink_metadata_v7(
-    struct audio_stream_in* stream,
-    const struct sink_metadata_v7* sink_metadata) {
+static void in_update_sink_metadata(struct audio_stream_in* stream,
+                                    const struct sink_metadata* sink_metadata) {
   LOG(INFO) << __func__;
   if (sink_metadata == nullptr || sink_metadata->track_count == 0) {
     return;
@@ -1294,7 +1254,7 @@ int adev_open_input_stream(struct audio_hw_device* dev,
   in->stream_in_.set_microphone_direction = in_set_microphone_direction;
   in->stream_in_.set_microphone_field_dimension =
       in_set_microphone_field_dimension;
-  in->stream_in_.update_sink_metadata_v7 = in_update_sink_metadata_v7;
+  in->stream_in_.update_sink_metadata = in_update_sink_metadata;
 
   if (!in->bluetooth_input_->LoadAudioConfig(config)) {
     LOG(ERROR) << __func__ << ": state=" << in->bluetooth_input_->GetState()
@@ -1317,7 +1277,7 @@ int adev_open_input_stream(struct audio_hw_device* dev,
   }
 
   in->frames_count_ =
-      FrameCount(in->preferred_data_interval_us, in->sample_rate_);
+      frame_count(in->preferred_data_interval_us, in->sample_rate_);
   in->frames_presented_ = 0;
 
   BluetoothStreamIn* in_ptr = in.release();

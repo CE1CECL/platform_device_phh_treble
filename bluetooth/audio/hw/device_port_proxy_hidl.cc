@@ -486,7 +486,7 @@ bool BluetoothAudioPortHidl::GetPresentationPosition(
   return retval;
 }
 
-void BluetoothAudioPortHidl::UpdateTracksMetadata(
+void BluetoothAudioPortHidl::UpdateSourceMetadata(
     const source_metadata* source_metadata) const {
   if (!in_use()) {
     LOG(ERROR) << __func__ << ": BluetoothAudioPort is not in use";

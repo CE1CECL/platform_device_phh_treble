@@ -259,4 +259,12 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/window_extensions.mk)
 PRODUCT_PRODUCT_PROPERTIES += \
     persist.settings.large_screen_opt.enabled=true
 
-PRODUCT_EXTRA_VNDK_VERSIONS += 28 29
+PRODUCT_EXTRA_VNDK_VERSIONS += 26 27 28 29
+
+PRODUCT_COPY_FILES += \
+	frameworks/native/data/etc/android.software.app_widgets.xml:system/etc/permissions/android.software.app_widgets.xml \
+	frameworks/native/data/etc/android.software.ipsec_tunnels.xml:system/etc/permissions/android.software.ipsec_tunnels.xml \
+
+PRODUCT_PACKAGES += \
+	ImsMediaService \
+	ImsStack \

@@ -55,7 +55,8 @@ class BluetoothAudioPortHidl : public BluetoothAudioPort {
   bool GetPresentationPosition(uint64_t* delay_ns, uint64_t* bytes,
                                timespec* timestamp) const override;
 
-  void UpdateTracksMetadata(const source_metadata* source_metadata) const;
+  void UpdateSourceMetadata(
+      const source_metadata* source_metadata) const override;
 
   BluetoothStreamState GetState() const override;
 
@@ -66,17 +67,6 @@ class BluetoothAudioPortHidl : public BluetoothAudioPort {
                SessionType_2_1::A2DP_SOFTWARE_ENCODING_DATAPATH ||
            session_type_hidl_ ==
                SessionType_2_1::A2DP_HARDWARE_OFFLOAD_DATAPATH;
-  }
-
-  bool IsLeAudio() const override {
-    return session_type_hidl_ ==
-               SessionType_2_1::LE_AUDIO_SOFTWARE_ENCODING_DATAPATH ||
-           session_type_hidl_ ==
-               SessionType_2_1::LE_AUDIO_SOFTWARE_DECODED_DATAPATH ||
-           session_type_hidl_ ==
-               SessionType_2_1::LE_AUDIO_HARDWARE_OFFLOAD_ENCODING_DATAPATH ||
-           session_type_hidl_ ==
-               SessionType_2_1::LE_AUDIO_HARDWARE_OFFLOAD_DECODING_DATAPATH;
   }
 
   bool GetPreferredDataIntervalUs(size_t* interval_us) const override;
